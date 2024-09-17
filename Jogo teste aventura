@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aventura Stickman</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <script src="game.js"></script>
+</body>
+</html>
+body {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #e0f7fa;
+}
+
+canvas {
+  border: 2px solid #000;
+}
+// Configurações do canvas
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = 800;
+canvas.height = 400;
+
+// Stickman
+const stickman = {
+  x: 50,
+  y: canvas.height - 100,
+  width: 20,
+  height: 50,
+  speed: 5,
+  velY: 0,
+  jumping: false,
+  grounded: false,
+  alive: true
+};
+
+// Gravidade e fricção
+const gravity = 0.8;
+const friction = 0.7;
+
+// Plataforma e obstáculos
+const platforms = [
+  { x: 0, y: canvas.height - 50, width: canvas.width, height: 50 },  // Chão
+  { x: 150, y: 300, width: 100, height: 10 },  // Plataforma 1
+  { x: 300, y: 250, width: 100, height: 10 },  // Plataforma 2
+  { x: 500, y: 200, width: 100, height: 10 }   // Plataforma 3
+];
+
+const obstacles = [
+  { x: 400, y: canvas.height - 100, width: 20, height: 50 },  // Obstáculo 1
+  { x: 600, y: canvas.height - 100, width: 20, height: 50 }   // Obstáculo 2
+];
+
+// Objetivo
+const goal = { x: 750, y: canvas.height - 100, width: 30, height: 50 };
+
+// Controle do movimento
+const keys = {
+  right: false,
+  left: false,
+  space: false
+};
+
+// Eventos de tecla
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'ArrowRight') keys.right = true;
+  if (e.code === 'ArrowLeft') keys.left = true;
+  if (e.code === 'Space' && !stickman.jumping) {
+    stickman.jumping = true;
+    stickman.velY = -15;
+  }
+});
+
+document.addEventListener('keyup', (e) => {
+  if (e.code === 'ArrowRight') keys.right = false;
+  if (e.code === 'ArrowLeft') keys.left = false;
+});
+
+// Função para desenhar o stickman
+function drawStickman() {
+  ctx.fillStyle = stickman.alive ? 'black' : 'red';
+  ctx.fillRect(stickman.x, stickman.y, stickman.width, stickman.height);
+  ctx.beginPath();
+  ctx.arc(stickman.x + 10, stickman.y - 10, 10, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// Função para verificar colisão
+function checkCollision(rect1, rect2) {
+  return (
+    rect1.x < rect2.x + rect2.width &&
+    rect1.x + rect1.width > rect2.x &&
+    rect1.y < rect2.y + rect2.height &&
+    rect1.height + rect1.y > rect2.y
+  );
+}
+
+// Função de atualização
+function update() {
+  if (!stickman.alive) return;
+
+  // Movimento horizontal
+  if (keys.right) {
+    stickman.x += stickman.speed;
+  }
+  if (keys.left) {
+    stickman.x -= stickman.speed;
+  }
+
+  // Aplicar gravidade
+  stickman.velY += gravity;
+  stickman.y += stickman.velY;
+
+  // Limitar stickman ao chão e plataformas
+  stickman.grounded = false;
+  platforms.forEach((platform) => {
+    if (checkCollision(stickman, platform)) {
+      stickman.y = platform.y - stickman.height;
+      stickman.jumping = false;
+      stickman.grounded = true;
+    }
+  });
+
+  if (!stickman.grounded) {
+    stickman.jumping = true;
+  }
+
+  // Verifica colisão com obstáculos
+  obstacles.forEach((obstacle) => {
+    if (checkCollision(stickman, obstacle)) {
+      stickman.alive = false;
+    }
+  });
+
+  // Verifica se o jogador alcançou o objetivo
+  if (checkCollision(stickman, goal)) {
+    alert("Você venceu!");
+    resetGame();
+  }
+
+  // Limitar stickman nas bordas do canvas
+  if (stickman.x < 0) {
+    stickman.x = 0;
+  } else if (stickman.x + stickman.width > canvas.width) {
+    stickman.x = canvas.width - stickman.width;
+  }
+}
+
+// Função para desenhar as plataformas, obstáculos e o objetivo
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Desenhar plataformas
+  platforms.forEach(platform => {
+    ctx.fillStyle = 'green';
+    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+  });
+
+  // Desenhar obstáculos
+  obstacles.forEach(obstacle => {
+    ctx.fillStyle = 'red';
+    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+  });
+
+  // Desenhar objetivo
+  ctx.fillStyle = 'gold';
+  ctx.fillRect(goal.x, goal.y, goal.width, goal.height);
+
+  // Desenhar o stickman
+  drawStickman();
+}
+
+// Função para reiniciar o jogo
+function resetGame() {
+  stickman.x = 50;
+  stickman.y = canvas.height - 100;
+  stickman.alive = true;
+}
+
+// Função principal de loop
+function gameLoop() {
+  update();
+  render();
+  requestAnimationFrame(gameLoop);
+}
+
+// Iniciar o jogo
+gameLoop();
